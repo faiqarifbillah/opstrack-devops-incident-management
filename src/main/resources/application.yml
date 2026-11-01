@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: opstrack
+  config:
+    # Local development secrets. Skipped when the file does not exist.
+    import: optional:file:.env[.properties]
+  datasource:
+    # DB_PASSWORD has no default on purpose: no real password is stored in this file.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/opstrack}
+    username: ${DB_USERNAME:opstrack}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # Creates and alters tables to match the entity. Fine for a portfolio
+      # project; a larger system would use migrations such as Flyway.
+      ddl-auto: update
+    # Finish all database work inside the service layer.
+    open-in-view: false
+
+opstrack:
+  security:
+    # Empty when unset, which makes ApiKeyFilter stop the application at startup.
+    api-key: ${OPSTRACK_API_KEY:}
+    rate-limit-per-minute: ${OPSTRACK_RATE_LIMIT_PER_MINUTE:60}
+
+server:
+  # Override with the SERVER_PORT environment variable if 8080 is taken.
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      # Do not list available endpoints at /actuator.
+      discovery:
+        enabled: false
+      exposure:
+        # Publish only the health endpoint, nothing else from Actuator.
+        include: health
+  endpoint:
+    health:
+      # Public callers see UP/DOWN only, never component details.
+      show-details: never
+      # Spring Boot 4 otherwise lists the liveness and readiness groups publicly.
+      probes:
+        enabled: false

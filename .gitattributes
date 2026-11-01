@@ -1,0 +1,5 @@
+# Keep Linux line endings on shell scripts so they run in Docker, WSL and CI.
+* text=auto
+*.sh text eol=lf
+mvnw text eol=lf
+*.cmd text eol=crlf

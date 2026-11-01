@@ -1,0 +1,49 @@
+name: CI
+
+# Pushes to main, plus every pull request. Limiting push to main stops a pull
+# request's branch from being built twice for each commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# This workflow only reads the code, so its token gets no write access.
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      # verify compiles, runs every test and packages the jar. Any failure stops
+      # the job and marks the run as failed.
+      - name: Build and run tests
+        run: ./mvnw -B -ntp verify
+
+      - name: Build Docker image
+        run: docker build -t opstrack:ci .
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          retention-days: 7
+
+      - name: Report result
+        if: always()
+        run: |
+          echo "Build and tests result: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"

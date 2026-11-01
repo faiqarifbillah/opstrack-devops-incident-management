@@ -1,0 +1,12 @@
+# Keep secrets, Git history and build output out of the build context.
+.env
+.env.*
+.git
+.github
+target
+docs
+postman
+docker
+*.md
+*.pem
+*.key

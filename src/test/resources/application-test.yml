@@ -1,0 +1,5 @@
+# Fake values used only by automated tests.
+opstrack:
+  security:
+    api-key: test-only-key-not-a-real-secret-0000
+    rate-limit-per-minute: 100000

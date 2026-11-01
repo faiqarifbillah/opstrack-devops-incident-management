@@ -1,0 +1,22 @@
+# Build output
+target/
+
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+.aws/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# OS and logs
+.DS_Store
+Thumbs.db
+*.log

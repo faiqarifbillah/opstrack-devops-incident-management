@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "OpsTrack API",
+    "description": "Run in order. Set the apiKey collection variable first, and never save a real key into this file.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "apiKey", "value": "" },
+    { "key": "incidentId", "value": "" }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "X-API-Key", "type": "string" },
+      { "key": "value", "value": "{{apiKey}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health check (public)",
+      "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/actuator/health" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('reports UP without details', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('UP'); pm.expect(b).to.not.have.property('components'); });"
+      ] } }]
+    },
+    {
+      "name": "Missing API key returns 401",
+      "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/incidents" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 401', () => pm.response.to.have.status(401));"
+      ] } }]
+    },
+    {
+      "name": "Invalid API key returns 401",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [{ "key": "X-API-Key", "value": "wrong-key" }],
+        "url": "{{baseUrl}}/api/incidents"
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 401', () => pm.response.to.have.status(401));"
+      ] } }]
+    },
+    {
+      "name": "Create incident",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/incidents",
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Payment API returning 500\",\n  \"description\": \"Spike in server errors\",\n  \"severity\": \"CRITICAL\",\n  \"assignedTo\": \"On-call engineer\"\n}" }
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 201', () => pm.response.to.have.status(201));",
+        "const b = pm.response.json();",
+        "pm.test('defaults to OPEN', () => pm.expect(b.status).to.eql('OPEN'));",
+        "pm.collectionVariables.set('incidentId', b.id);"
+      ] } }]
+    },
+    {
+      "name": "List incidents",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/incidents" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('includes the new incident', () => { const id = Number(pm.collectionVariables.get('incidentId')); pm.expect(pm.response.json().map(i => i.id)).to.include(id); });"
+      ] } }]
+    },
+    {
+      "name": "Get incident by ID",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/incidents/{{incidentId}}" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('has the right title', () => pm.expect(pm.response.json().title).to.eql('Payment API returning 500'));"
+      ] } }]
+    },
+    {
+      "name": "Filter by severity",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/incidents/severity/CRITICAL" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('only CRITICAL returned', () => { const list = pm.response.json(); pm.expect(list.length).to.be.above(0); list.forEach(i => pm.expect(i.severity).to.eql('CRITICAL')); });"
+      ] } }]
+    },
+    {
+      "name": "Invalid input returns 400",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/incidents",
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Missing other fields\"\n}" }
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 400', () => pm.response.to.have.status(400));",
+        "pm.test('names the invalid fields', () => pm.expect(pm.response.json().fieldErrors).to.have.keys('description', 'severity'));"
+      ] } }]
+    },
+    {
+      "name": "Resolve incident",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/incidents/{{incidentId}}",
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Payment API returning 500\",\n  \"description\": \"Spike in server errors\",\n  \"severity\": \"CRITICAL\",\n  \"status\": \"RESOLVED\",\n  \"assignedTo\": \"On-call engineer\",\n  \"resolutionNotes\": \"Restarted connection pool\"\n}" }
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('is RESOLVED', () => pm.expect(pm.response.json().status).to.eql('RESOLVED'));"
+      ] } }]
+    },
+    {
+      "name": "Filter by status",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/incidents/status/RESOLVED" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 200', () => pm.response.to.have.status(200));",
+        "pm.test('only RESOLVED returned', () => { const list = pm.response.json(); pm.expect(list.length).to.be.above(0); list.forEach(i => pm.expect(i.status).to.eql('RESOLVED')); });"
+      ] } }]
+    },
+    {
+      "name": "Delete incident",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/api/incidents/{{incidentId}}" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 204', () => pm.response.to.have.status(204));"
+      ] } }]
+    },
+    {
+      "name": "Deleted incident returns 404",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/incidents/{{incidentId}}" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('status 404', () => pm.response.to.have.status(404));"
+      ] } }]
+    }
+  ]
+}
