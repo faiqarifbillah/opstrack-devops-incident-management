@@ -15,6 +15,7 @@ On Windows PowerShell, use `.\mvnw.cmd clean verify`. Tests use an in-memory H2 
 | `RateLimitTests` | 429 response, separate clients, failed guesses counted |
 | `RateLimiterTests` | Limit, window reset, cleanup, simultaneous requests |
 | `GlobalExceptionHandlerTests` | Unexpected errors return 500 without internal details |
+| `WebSecurityTests` | Security headers, no CORS permission for other sites, Actuator endpoint list hidden |
 | `OpsTrackApplicationTests` | Health details hidden, other Actuator endpoints not exposed |
 
 To see a coverage report without changing `pom.xml`:
